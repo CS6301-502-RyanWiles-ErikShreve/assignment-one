@@ -1,6 +1,5 @@
 package edu.utdallas.cs6301_502;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,14 +9,22 @@ import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
 
+/* 
+ * Implementation pretty much leaves comments alone.  Those should be handled in a subsequent processing phase.
+ * Ignores the package & import statements at roughly their legal locations, but should preserve a string later that matches that format.
+ * 
+ * Stuff to do:
+ * 	look for c & javadoc comments that have their close on the same line as statements and treat the comment different than the statement
+ *  better application of JAVA_KEYWORDS based on their location.  currently removing all keywords.  would prefer to strip keywords from legal locations 
+ */
 public class JavaFileParser {
 
 	private static final String[] JAVA_KEYWORDS = new String[] {
 			"abstract", "continue", "for", "new", "switch",
-			"assert", "default", "goto", "package", "synchronized",
+			"assert", "default", "goto", "synchronized",
 			"boolean", "do", "if", "private", "this",
 			"break", "double", "implements", "protected", "throw",
-			"byte", "else", "import", "public", "throws",
+			"byte", "else", "public", "throws",
 			"case", "enum", "instanceof", "return", "transient",
 			"catch", "extends", "int", "short", "try",
 			"char", "final", "interface", "static", "void",
@@ -77,7 +84,7 @@ public class JavaFileParser {
 		}
 	}
 	
-	public String parse() throws FileNotFoundException, IOException {
+	private String parse() throws FileNotFoundException, IOException {
 		StringBuilder builder = new StringBuilder();
 
 		BufferedReader reader = new BufferedReader(new FileReader(file));
