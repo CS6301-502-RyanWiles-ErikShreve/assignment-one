@@ -1,9 +1,10 @@
-package edu.utdallas.cs6301_502;
+package edu.utdallas.cs6301_502; 
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashSet;
@@ -47,6 +48,8 @@ public class JavaFileParser {
 		loadStopWords();
 		try {
 			this.bagOWords = parse();
+			dumpWords( file.getPath() + ".bag");
+			
 		} catch (Exception e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
@@ -54,8 +57,36 @@ public class JavaFileParser {
 
 	public static void main(String... args) {
 		try {
-			JavaFileParser jfp = new JavaFileParser(true, new File("/Users/rwiles/Documents/workspace/embeddableSearch/src/main/java/net/networkdowntime/search/text/processing/KeywordScrubber.java"));
+			JavaFileParser jfp;
+			BufferedReader readerFileList;
+			
+			if (args.length > 0)
+			{
+				readerFileList = new BufferedReader(new FileReader(args[0]));
+				
+				try {
+					while (readerFileList.ready()) 
+					{
+						String line = readerFileList.readLine().trim();
+
+						if (line.isEmpty()) {
+							continue;
+						}
+					
+						jfp = new JavaFileParser(false, new File(line));
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			else
+			{
+				jfp = new JavaFileParser(true, new File("/Users/rwiles/Documents/workspace/embeddableSearch/src/main/java/net/networkdowntime/search/text/processing/KeywordScrubber.java"));
+			}
 		} catch (ParseException e) {
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			System.out.println("Could not open: " + args[0]);
 			e.printStackTrace();
 		}
 	}
@@ -84,6 +115,18 @@ public class JavaFileParser {
 		}
 	}
 	
+	private void dumpWords(String fileName)
+	{
+		FileWriter writer;
+		try {
+			writer = new FileWriter(fileName);
+			writer.write(this.bagOWords);
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	private String parse() throws FileNotFoundException, IOException {
 		StringBuilder builder = new StringBuilder();
 
@@ -91,8 +134,6 @@ public class JavaFileParser {
 		boolean inDoc = false;
 		boolean pastPackage = false;
 		boolean hasProcessedPackage = false;
-		boolean pastImports = false;
-		boolean hasProcessedImports = false;
 
 		while (reader.ready()) {
 			String line = reader.readLine().trim();
@@ -101,12 +142,27 @@ public class JavaFileParser {
 				continue;
 			}
 
+			
+			// package statement must be the first non-comment line in java
+			if (!hasProcessedPackage  && line.startsWith("package ")) {
+				hasProcessedPackage = true;
+				
+				// Remove package part and process remainder of line (could be a comment)
+				line = line.replaceFirst("package .+;", " ").trim();
+			}
+			
+			
+			// import statements must follow the package statement, if present, and come before the rest
+			// comments are allowed in the imports
+			if (line.startsWith("import ")) {
+				// Remove import part and process remainder of line (could be a comment)
+				line = line.replaceFirst("import .+;", "");
+			}
+			
 			// check for line with only // comments
 			if (line.startsWith("//")) {
 				line = line.substring(2).trim();
 				debug(line);
-				builder.append(" " + line);
-				continue;
 			}
 
 			if (inDoc) {
@@ -117,8 +173,6 @@ public class JavaFileParser {
 					line = line.substring(1).trim();
 				}
 				debug(line);
-				builder.append(" " + line);
-				continue;
 			}
 
 			// check for javadoc style comments
@@ -126,8 +180,6 @@ public class JavaFileParser {
 				inDoc = true;
 				line = line.substring(3).trim();
 				debug(line);
-				builder.append(" " + line);
-				continue;
 			}
 
 			// check for c style comments
@@ -135,24 +187,8 @@ public class JavaFileParser {
 				inDoc = true;
 				line = line.substring(2).trim();
 				debug(line);
-				builder.append(" " + line);
-				continue;
 			}
 
-			// package statement must be the first non-comment line in java
-			if (!hasProcessedPackage && !pastPackage && line.startsWith("package ")) {
-				hasProcessedPackage = true;
-				continue;
-			}
-			pastPackage = true;
-
-			// import statements must follow the package statement, if present, and come before the rest
-			// comments are allowed in the imports
-			if (!hasProcessedImports && !pastImports && line.startsWith("import ")) {
-				continue;
-			}
-			hasProcessedImports = true;
-			pastImports = true;
 
 			for (String keyword : JAVA_KEYWORDS) {
 				line = line.replaceAll("^" + keyword + " ", " ").trim();
@@ -171,6 +207,10 @@ public class JavaFileParser {
 			line = line.replaceAll(" 0[x|X][0-9a-fA-F]+", " ").trim(); // integer numbers as hex
 			line = line.replaceAll(" [0-9]+", " ").trim(); // integer numbers
 			line = line.replaceAll("\\s+", " ");
+			
+			// Remove 1 and 2 character words
+			line = line.replaceAll("(\\s|^).{1,2}(\\s|$)", " ").trim();
+			
 			if (!line.isEmpty()) {
 				debug(line);
 				builder.append(" " + line);
