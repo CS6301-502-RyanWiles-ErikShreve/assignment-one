@@ -1,4 +1,4 @@
-package edu.utdallas.cs6301_502; 
+package edu.utdallas.cs6301_502;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -10,13 +10,13 @@ import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
 
-/* 
- * Implementation pretty much leaves comments alone.  Those should be handled in a subsequent processing phase.
+/*
+ * Implementation pretty much leaves comments alone. Those should be handled in a subsequent processing phase.
  * Ignores the package & import statements at roughly their legal locations, but should preserve a string later that matches that format.
  * 
  * Stuff to do:
- * 	look for c & javadoc comments that have their close on the same line as statements and treat the comment different than the statement
- *  better application of JAVA_KEYWORDS based on their location.  currently removing all keywords.  would prefer to strip keywords from legal locations 
+ * look for c & javadoc comments that have their close on the same line as statements and treat the comment different than the statement
+ * better application of JAVA_KEYWORDS based on their location. currently removing all keywords. would prefer to strip keywords from legal locations
  */
 public class JavaFileParser {
 
@@ -48,8 +48,8 @@ public class JavaFileParser {
 		loadStopWords();
 		try {
 			this.bagOWords = parse();
-			dumpWords( file.getPath() + ".bag");
-			
+			dumpWords(file.getPath() + ".bag");
+
 		} catch (Exception e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
@@ -59,28 +59,24 @@ public class JavaFileParser {
 		try {
 			JavaFileParser jfp;
 			BufferedReader readerFileList;
-			
-			if (args.length > 0)
-			{
+
+			if (args.length > 0) {
 				readerFileList = new BufferedReader(new FileReader(args[0]));
-				
+
 				try {
-					while (readerFileList.ready()) 
-					{
+					while (readerFileList.ready()) {
 						String line = readerFileList.readLine().trim();
 
 						if (line.isEmpty()) {
 							continue;
 						}
-					
+
 						jfp = new JavaFileParser(false, new File(line));
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
-			else
-			{
+			} else {
 				jfp = new JavaFileParser(true, new File("/Users/rwiles/Documents/workspace/embeddableSearch/src/main/java/net/networkdowntime/search/text/processing/KeywordScrubber.java"));
 			}
 		} catch (ParseException e) {
@@ -114,9 +110,8 @@ public class JavaFileParser {
 			System.out.println(line);
 		}
 	}
-	
-	private void dumpWords(String fileName)
-	{
+
+	private void dumpWords(String fileName) {
 		FileWriter writer;
 		try {
 			writer = new FileWriter(fileName);
@@ -126,7 +121,7 @@ public class JavaFileParser {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private String parse() throws FileNotFoundException, IOException {
 		StringBuilder builder = new StringBuilder();
 
@@ -142,23 +137,21 @@ public class JavaFileParser {
 				continue;
 			}
 
-			
 			// package statement must be the first non-comment line in java
-			if (!hasProcessedPackage  && line.startsWith("package ")) {
+			if (!hasProcessedPackage && line.startsWith("package ")) {
 				hasProcessedPackage = true;
-				
+
 				// Remove package part and process remainder of line (could be a comment)
 				line = line.replaceFirst("package .+;", " ").trim();
 			}
-			
-			
+
 			// import statements must follow the package statement, if present, and come before the rest
 			// comments are allowed in the imports
 			if (line.startsWith("import ")) {
 				// Remove import part and process remainder of line (could be a comment)
 				line = line.replaceFirst("import .+;", "");
 			}
-			
+
 			// check for line with only // comments
 			if (line.startsWith("//")) {
 				line = line.substring(2).trim();
@@ -189,7 +182,6 @@ public class JavaFileParser {
 				debug(line);
 			}
 
-
 			for (String keyword : JAVA_KEYWORDS) {
 				line = line.replaceAll("^" + keyword + " ", " ").trim();
 				line = line.replaceAll(" " + keyword + " ", " ").trim();
@@ -207,13 +199,29 @@ public class JavaFileParser {
 			line = line.replaceAll(" 0[x|X][0-9a-fA-F]+", " ").trim(); // integer numbers as hex
 			line = line.replaceAll(" [0-9]+", " ").trim(); // integer numbers
 			line = line.replaceAll("\\s+", " ");
-			
+
 			// Remove 1 and 2 character words
 			line = line.replaceAll("(\\s|^).{1,2}(\\s|$)", " ").trim();
-			
+
 			if (!line.isEmpty()) {
-				debug(line);
-				builder.append(" " + line);
+				StringBuilder lineBuilder = new StringBuilder();
+
+				for (String word : line.split("\\s+")) {
+					lineBuilder.append(word);
+					lineBuilder.append(" ");
+
+					String[] explodedWord = word.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
+
+					if (explodedWord.length > 1) {
+						for (String w : explodedWord) {
+							lineBuilder.append(w);
+							lineBuilder.append(" ");
+						}
+					}
+				}
+				
+				debug(lineBuilder.toString());
+				builder.append(" " + lineBuilder.toString());
 			}
 		}
 		reader.close();
