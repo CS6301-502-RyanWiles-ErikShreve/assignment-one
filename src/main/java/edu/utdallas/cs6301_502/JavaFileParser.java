@@ -35,26 +35,31 @@ public class JavaFileParser {
 	private boolean debug = false;
 	private File file;
 	private String bagOWords = "";
+
+
 	private Set<String> stopWords = new HashSet<String>();
 
 	public JavaFileParser(File file) throws ParseException {
 		this(false, file);
 	}
 
-	public JavaFileParser(boolean debug, File file) throws ParseException {
+	public JavaFileParser(boolean debug, File inputFile) throws ParseException {
 		this.debug = debug;
 
-		this.file = file;
+		this.file = inputFile;
 		loadStopWords();
 		try {
 			this.bagOWords = parse();
-			dumpWords(file.getPath() + ".bag");
 
 		} catch (Exception e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
 	}
 
+	public String getBagOWords() {
+		return bagOWords;
+	}
+	
 	public static void main(String... args) {
 		try {
 			JavaFileParser jfp;
@@ -71,7 +76,26 @@ public class JavaFileParser {
 							continue;
 						}
 
-						jfp = new JavaFileParser(false, new File(line));
+						jfp = new JavaFileParser(true, new File(line));
+						
+						
+						FileWriter writer;
+						try {
+							String outDir = "";
+							if (args.length > 1 && args[1].length() > 0)
+							{
+								outDir = args[1];
+							}
+							
+							File outFile = new File(outDir + line);
+							outFile.getParentFile().mkdirs();
+							
+							writer = new FileWriter(outFile);
+							writer.write(jfp.getBagOWords());
+							writer.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -111,25 +135,17 @@ public class JavaFileParser {
 		}
 	}
 
-	private void dumpWords(String fileName) {
-		FileWriter writer;
-		try {
-			writer = new FileWriter(fileName);
-			writer.write(this.bagOWords);
-			writer.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+
 
 	private String parse() throws FileNotFoundException, IOException {
 		StringBuilder builder = new StringBuilder();
 
 		BufferedReader reader = new BufferedReader(new FileReader(file));
 		boolean inDoc = false;
-		boolean pastPackage = false;
 		boolean hasProcessedPackage = false;
 
+		debug(file.getAbsolutePath());
+		
 		while (reader.ready()) {
 			String line = reader.readLine().trim();
 
@@ -201,8 +217,15 @@ public class JavaFileParser {
 			line = line.replaceAll("\\s+", " ");
 
 			// Remove 1 and 2 character words
-			line = line.replaceAll("(\\s|^).{1,2}(\\s|$)", " ").trim();
+			String prevLine;
+			do 
+			{
+				prevLine = line;
+				line = prevLine.replaceAll("(\\s|^).{1,2}(\\s|$)", " ").trim();
+			} while (!line.equals(prevLine));
+			
 
+			// Split CamelCase
 			if (!line.isEmpty()) {
 				StringBuilder lineBuilder = new StringBuilder();
 
@@ -214,8 +237,11 @@ public class JavaFileParser {
 
 					if (explodedWord.length > 1) {
 						for (String w : explodedWord) {
-							lineBuilder.append(w);
-							lineBuilder.append(" ");
+							if (w.length() > 2) // Don't include 1 and 2 character words
+							{
+								lineBuilder.append(w);
+								lineBuilder.append(" ");
+							}
 						}
 					}
 				}
@@ -223,6 +249,9 @@ public class JavaFileParser {
 				debug(lineBuilder.toString());
 				builder.append(" " + lineBuilder.toString());
 			}
+			
+
+			
 		}
 		reader.close();
 		return builder.toString();
