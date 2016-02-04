@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,20 +31,21 @@ public class JavaFileParser {
 			"catch", "extends", "int", "short", "try",
 			"char", "final", "interface", "static", "void",
 			"class", "finally", "long", "strictfp", "volatile",
-			"const", "float", "native", "super", "while", "null" };
+			"const", "float", "native", "super", "while", "null", "true", "false" };
 
 	private boolean debug = false;
 	private File file;
 	private String bagOWords = "";
 
-
 	private Set<String> stopWords = new HashSet<String>();
+	private Set<String> keywordSet = new HashSet<String>();
 
 	public JavaFileParser(File file) throws ParseException {
 		this(false, file);
 	}
 
 	public JavaFileParser(boolean debug, File inputFile) throws ParseException {
+		keywordSet.addAll(Arrays.asList(JAVA_KEYWORDS));
 		this.debug = debug;
 
 		this.file = inputFile;
@@ -59,7 +61,7 @@ public class JavaFileParser {
 	public String getBagOWords() {
 		return bagOWords;
 	}
-	
+
 	public static void main(String... args) {
 		try {
 			JavaFileParser jfp;
@@ -77,19 +79,17 @@ public class JavaFileParser {
 						}
 
 						jfp = new JavaFileParser(true, new File(line));
-						
-						
+
 						FileWriter writer;
 						try {
 							String outDir = "";
-							if (args.length > 1 && args[1].length() > 0)
-							{
+							if (args.length > 1 && args[1].length() > 0) {
 								outDir = args[1];
 							}
-							
+
 							File outFile = new File(outDir + line);
 							outFile.getParentFile().mkdirs();
-							
+
 							writer = new FileWriter(outFile);
 							writer.write(jfp.getBagOWords());
 							writer.close();
@@ -135,8 +135,6 @@ public class JavaFileParser {
 		}
 	}
 
-
-
 	private String parse() throws FileNotFoundException, IOException {
 		StringBuilder builder = new StringBuilder();
 
@@ -145,7 +143,7 @@ public class JavaFileParser {
 		boolean hasProcessedPackage = false;
 
 		debug(file.getAbsolutePath());
-		
+
 		while (reader.ready()) {
 			String line = reader.readLine().trim();
 
@@ -171,7 +169,7 @@ public class JavaFileParser {
 			// check for line with only // comments
 			if (line.startsWith("//")) {
 				line = line.substring(2).trim();
-				debug(line);
+				//				debug(line);
 			}
 
 			if (inDoc) {
@@ -181,26 +179,21 @@ public class JavaFileParser {
 				} else if (line.startsWith("*")) {
 					line = line.substring(1).trim();
 				}
-				debug(line);
+				//				debug(line);
 			}
 
 			// check for javadoc style comments
 			if (line.startsWith("/**")) {
 				inDoc = true;
 				line = line.substring(3).trim();
-				debug(line);
+				//				debug(line);
 			}
 
 			// check for c style comments
 			if (line.startsWith("/*")) {
 				inDoc = true;
 				line = line.substring(2).trim();
-				debug(line);
-			}
-
-			for (String keyword : JAVA_KEYWORDS) {
-				line = line.replaceAll("^" + keyword + " ", " ").trim();
-				line = line.replaceAll(" " + keyword + " ", " ").trim();
+				//				debug(line);
 			}
 
 			// explode punctuation to a space
@@ -216,42 +209,37 @@ public class JavaFileParser {
 			line = line.replaceAll(" [0-9]+", " ").trim(); // integer numbers
 			line = line.replaceAll("\\s+", " ");
 
-			// Remove 1 and 2 character words
-			String prevLine;
-			do 
-			{
-				prevLine = line;
-				line = prevLine.replaceAll("(\\s|^).{1,2}(\\s|$)", " ").trim();
-			} while (!line.equals(prevLine));
-			
-
 			// Split CamelCase
 			if (!line.isEmpty()) {
 				StringBuilder lineBuilder = new StringBuilder();
 
 				for (String word : line.split("\\s+")) {
-					lineBuilder.append(word);
-					lineBuilder.append(" ");
+					if (word.length() > 2) {
+						if (!keywordSet.contains(word)) {
+							lineBuilder.append(word);
+							lineBuilder.append(" ");
 
-					String[] explodedWord = word.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
+							String[] explodedWord = word.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
 
-					if (explodedWord.length > 1) {
-						for (String w : explodedWord) {
-							if (w.length() > 2) // Don't include 1 and 2 character words
-							{
-								lineBuilder.append(w);
-								lineBuilder.append(" ");
+							if (explodedWord.length > 1) {
+								for (String w : explodedWord) {
+									if (w.length() > 2) { // Don't include 1 and 2 character words
+										lineBuilder.append(w);
+										lineBuilder.append(" ");
+									}
+								}
 							}
 						}
 					}
 				}
-				
-				debug(lineBuilder.toString());
-				builder.append(" " + lineBuilder.toString());
-			}
-			
 
-			
+				line = lineBuilder.toString();
+				if (!line.isEmpty()) {
+					debug(lineBuilder.toString());
+					builder.append(" " + lineBuilder.toString());
+				}
+			}
+
 		}
 		reader.close();
 		return builder.toString();
