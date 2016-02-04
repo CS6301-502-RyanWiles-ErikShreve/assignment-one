@@ -78,7 +78,7 @@ public class JavaFileParser {
 							continue;
 						}
 
-						jfp = new JavaFileParser(true, new File(line));
+						jfp = new JavaFileParser(false, new File(line));
 
 						FileWriter writer;
 						try {
@@ -202,11 +202,11 @@ public class JavaFileParser {
 			line = line.replaceAll("\\\\r", " ").trim();
 			line = line.replaceAll("\\\\n", " ").trim();
 			line = line.replaceAll("\\\\", " ").trim();
-			line = line.replaceAll(" [0-9]+\\.[0-9]+", " ").trim(); // decimal numbers
-			line = line.replaceAll(" [0-9]+f", " ").trim(); // integer numbers as a float
-			line = line.replaceAll(" [0-9]+d", " ").trim(); // integer numbers as a double
-			line = line.replaceAll(" 0[x|X][0-9a-fA-F]+", " ").trim(); // integer numbers as hex
-			line = line.replaceAll(" [0-9]+", " ").trim(); // integer numbers
+			line = line.replaceAll("(^\\s)[0-9]+\\.[0-9]+", " ").trim(); // decimal numbers
+			line = line.replaceAll("(^\\s)[0-9]+f", " ").trim(); // integer numbers as a float
+			line = line.replaceAll("(^\\s)[0-9]+d", " ").trim(); // integer numbers as a double
+			line = line.replaceAll("(^\\s)0[x|X][0-9a-fA-F]+", " ").trim(); // integer numbers as hex
+			line = line.replaceAll("(^\\s)[0-9]+", " ").trim(); // integer numbers
 			line = line.replaceAll("\\s+", " ");
 
 			// Split CamelCase
@@ -234,7 +234,7 @@ public class JavaFileParser {
 				}
 
 				line = lineBuilder.toString();
-				if (!line.isEmpty()) {
+				if (!line.isEmpty()) {					
 					debug(lineBuilder.toString());
 					builder.append(" " + lineBuilder.toString());
 				}
