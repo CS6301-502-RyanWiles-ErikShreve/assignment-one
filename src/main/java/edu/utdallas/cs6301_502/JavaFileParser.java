@@ -197,7 +197,7 @@ public class JavaFileParser {
 			}
 
 			// explode punctuation to a space
-			line = line.replaceAll("[\\{|\\}|\\(|\\)|;|,|=|+|\\-|*|\"|'|/|\\?|:|<|\\[|\\]|!|\\>|\\^|\\$|\\&\\&|\\|\\||\\.|`|#|~]", " ").trim();
+			line = line.replaceAll("[\\{|\\}|\\(|\\)|;|,|=|+|\\-|*|\"|'|/|\\?|:|<|\\[|\\]|!|\\>|\\^|\\$|\\&\\&|\\|\\||\\.|`|#|~|_]", " ").trim();
 			line = line.replaceAll("\\\\t", " ").trim();
 			line = line.replaceAll("\\\\r", " ").trim();
 			line = line.replaceAll("\\\\n", " ").trim();
